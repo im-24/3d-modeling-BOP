@@ -1,28 +1,22 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-
 plugins {
-    alias(libs.plugins.kotlinJvm)
-    alias(libs.plugins.composeMultiplatform)
-    alias(libs.plugins.composeCompiler)
+    kotlin("jvm") version "2.4.0"
+    id("org.openjfx.javafxplugin") version "0.1.0"
+    application
+}
+
+repositories {
+    mavenCentral()
+}
+
+javafx {
+    version = "21.0.2"
+    modules = listOf("javafx.controls", "javafx.graphics")
+}
+
+application {
+    mainClass.set("com.example.app3d.AppKt")
 }
 
 dependencies {
-    implementation(projects.shared)
-
-    implementation(compose.desktop.currentOs)
-    implementation(libs.kotlinx.coroutinesSwing)
-
-    implementation(libs.compose.uiToolingPreview)
-}
-
-compose.desktop {
-    application {
-        mainClass = "org.example.project.MainKt"
-
-        nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "org.example.project"
-            packageVersion = "1.0.0"
-        }
-    }
+    implementation(kotlin("stdlib"))
 }

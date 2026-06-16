@@ -1,13 +1,8 @@
-package org.example.project
+import javafx.scene.layout.BorderPane
 
-import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.application
-
-fun main() = application {
-    Window(
-        onCloseRequest = ::exitApplication,
-        title = "KotlinProject",
-    ) {
-        App()
+class MainView(viewModel: SceneViewModel) : BorderPane() {
+    init {
+        center = Scene3DView(viewModel)
+        right = ControlPanelView(viewModel)
     }
 }
