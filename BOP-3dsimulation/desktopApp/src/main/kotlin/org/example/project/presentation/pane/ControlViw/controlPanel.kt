@@ -173,34 +173,35 @@ class RamController(namedParts: Map<String, PartViewModel>) {
         val p = currentPair() ?: return
         if (pairState[p.key] == false) return
         animatePair(p, open = false)
-    }
-    private fun animatePair(pair: RamPair, open: Boolean) {
+    }private fun animatePair(pair: RamPair, open: Boolean) {
         pairState[pair.key] = open
-        val targetA = if (open) -pair.openOffset -offsetitem else pair.closedOffset -offsetitem
-        val targetB = if (open)  pair.openOffset - offsetitem else pair.closedOffset -offsetitem
+        val targetA = if (open) -pair.openOffset else pair.closedOffset
+        val targetB = if (open) pair.openOffset else pair.closedOffset
 
-        // Set the final position immediately
-        // Then animate from current to target
-        val startA = pair.shapeA.translateX - offsetitem
-        val startB = pair.shapeB.translateX -offsetitem
+        val startA = pair.shapeA.translateX
+        val startB = pair.shapeB.translateX
 
-        // Calculate the difference
-        val deltaA = targetA - startA
-        val deltaB = targetB - startB
-
-        // Animate using a timeline for more control
-        val anim = javafx.animation.Timeline(
+        val timeline = javafx.animation.Timeline(
             javafx.animation.KeyFrame(
                 javafx.util.Duration.seconds(0.8),
                 javafx.animation.KeyValue(pair.shapeA.translateXProperty(), targetA),
                 javafx.animation.KeyValue(pair.shapeB.translateXProperty(), targetB)
             )
         )
-        anim.play()
 
-        onChanged?.invoke()
+        // Set initial positions
+        pair.shapeA.translateX = startA
+        pair.shapeB.translateX = startB
+
+        timeline.setOnFinished {
+            // Ensure final positions are set (for safety)
+            pair.shapeA.translateX = targetA
+            pair.shapeB.translateX = targetB
+            onChanged?.invoke()
+        }
+
+        timeline.play()
     }
-
     // ── Status label ───────────────────────────────────────────────
 
     fun currentLabel(): String {
@@ -457,14 +458,18 @@ class controlPanel(
     // ─────────────────────────────────────────────────────────────
     //  Keyboard handler — wire from App.kt scene.setOnKeyPressed
     // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────
+//  Keyboard handler — wire from App.kt scene.setOnKeyPressed
+// ─────────────────────────────────────────────────────────────────
     fun handleKey(code: javafx.scene.input.KeyCode, view: view) {
-        if (!view.keyboardControlEnabled.get()) return
+
         when (code) {
+            javafx.scene.input.KeyCode.UP -> ramCtrl.selectPrev()
+            javafx.scene.input.KeyCode.DOWN -> ramCtrl.selectNext()
             javafx.scene.input.KeyCode.ENTER -> ramCtrl.toggleSelected()
+            javafx.scene.input.KeyCode.R -> view.resetView()
             javafx.scene.input.KeyCode.RIGHT -> ramCtrl.openSelected()
-            javafx.scene.input.KeyCode.LEFT  -> ramCtrl.closeSelected()
-            javafx.scene.input.KeyCode.UP    -> ramCtrl.selectPrev()
-            javafx.scene.input.KeyCode.DOWN  -> ramCtrl.selectNext()
+            javafx.scene.input.KeyCode.LEFT -> ramCtrl.closeSelected()
             else -> {}
         }
     }
