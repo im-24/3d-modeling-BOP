@@ -79,6 +79,12 @@ fun PartsBuild(parent: BopViewModel) {
 
     createPipe(pipe)
 
+    // Register named parts so the control panel can access them
+    parent.namedParts["annular"] = annular
+    parent.namedParts["blind"]   = blind
+    parent.namedParts["spool"]   = spool
+    parent.namedParts["pipe"]    = pipe
+
     parent.objects3d.children.addAll(
         pipe.object3D,
         annular.object3D,
@@ -307,8 +313,8 @@ fun createBlind(blind: PartViewModel) {
     blind.object3D.children.add(rightBonnet2)
 
     blind.movRAM = listOf(
-        Pair( leftBonnet , rightBonnet ),
-        Pair(rightPipeRam2, leftPipeRam2)
+        Pair( rightBonnet , leftBonnet ),
+        Pair(rightBonnet2, leftBonnet2)
     )
 
 
@@ -505,11 +511,11 @@ fun createPipe(pipe: PartViewModel) {
         pipe.object3D.children.add(actuator)
 
     }
-        val upperConnector = Cylinder(r(56.0), 18.0)
-        upperConnector.material = bodyMaterial
-        upperConnector.translateY = currentY + 9.0 - centerOffset
-        pipe.object3D.children.add(upperConnector)
-        currentY += 18.0
+    val upperConnector = Cylinder(r(56.0), 18.0)
+    upperConnector.material = bodyMaterial
+    upperConnector.translateY = currentY + 9.0 - centerOffset
+    pipe.object3D.children.add(upperConnector)
+    currentY += 18.0
 
 
     val riserAdapter = Cylinder(r(50.0), 20.0)

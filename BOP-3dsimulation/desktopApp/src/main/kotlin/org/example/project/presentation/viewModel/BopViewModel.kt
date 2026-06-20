@@ -17,18 +17,20 @@ class BopViewModel(
     isvisible: Boolean = true,
     selected: Boolean = true,
 ) {
-    val id = id
+    val id          = id
     var totalheight = totalheight
-    var position = position
-    var scale = scale
-    var rotation = rotation
-    val parts = parts
-    var isvisible = isvisible
-    var selected = selected
-    var objects3d = objects3d
+    var position    = position
+    var scale       = scale
+    var rotation    = rotation
+    val parts       = parts
+    var isvisible   = isvisible
+    var selected    = selected
+    var objects3d   = objects3d
 
+    /** Named parts registered by PartsBuild so the control panel can bind to them. */
+    val namedParts: MutableMap<String, PartViewModel> = mutableMapOf()
 
-    fun visible (visible : Boolean) {
+    fun visible(visible: Boolean) {
         this.isvisible = visible
         this.parts?.forEach { it.visible = visible }
     }

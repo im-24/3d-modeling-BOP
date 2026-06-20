@@ -7,7 +7,6 @@ import javafx.scene.paint.PhongMaterial
 
 
 object Material {
-    val selected : Material = PhongMaterial(Color.rgb(255, 255, 255)).apply{ specularPower=100.0}
     val bodyMaterial:Material = PhongMaterial(Color.rgb(180, 70, 50)).apply { specularPower=100.0 }    // Industrial red
     val flangeMaterial:Material = PhongMaterial(Color.rgb(200, 90, 65)).apply { specularPower=100.0 }    // Lighter red
     val actuatorMaterial:Material = PhongMaterial(Color.rgb(70, 120, 180)).apply { specularPower=100.0 } // Blue hydraulics
@@ -22,6 +21,9 @@ object Material {
         specularColor = Color.WHITE
         specularPower = 100.0
     }
+
+    /** Violet highlight — used when a RAM shape is selected for keyboard control */
+    val selected       = PhongMaterial(Color.rgb(198, 120, 221))  // #c678dd
     val test = PhongMaterial(Color.rgb(0, 255, 0)).apply {specularPower=100.0 }
 
 }

@@ -16,11 +16,9 @@ import org.example.project.presentation.viewModel.view
 
 val screenBounds = Screen.getPrimary().visualBounds
 
-class BOPview(view: view ) :
+class BOPview(view: view, mainBOP: org.example.project.presentation.viewModel.BopViewModel) :
     SubScene(Group(), screenBounds.width, screenBounds.height, true, SceneAntialiasing.BALANCED) {
     init {
-
-        val mainBOP = BOPbuild()
         val rootGroup = root as Group
         rootGroup.children.add(mainBOP.objects3d)
         lights(rootGroup)
@@ -62,6 +60,7 @@ class BOPview(view: view ) :
 
 
         camera = createBopCamera()
-        fill = Color.rgb( 21,45,98)
+        fill = view.backgroundColor.get()
+        view.backgroundColor.addListener { _, _, newColor -> fill = newColor }
     }
 }

@@ -14,7 +14,6 @@ class BOPsimulation : Application() {
         val view = view(model)
         stage.scene = Scene(App(view))
         stage.title = "BOP simulation"
-        stage.isFullScreen = true
         stage.show()
     }
 }
