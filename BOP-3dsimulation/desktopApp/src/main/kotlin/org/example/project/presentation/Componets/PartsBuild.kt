@@ -9,10 +9,12 @@ import javafx.scene.transform.Rotate
 import org.example.project.Domain.model.part
 import org.example.project.Domain.model.r
 import org.example.project.presentation.theme.Material
+import org.example.project.presentation.theme.Material.blackish
 import org.example.project.presentation.theme.Material.bodyMaterial
 import org.example.project.presentation.theme.Material.boltMaterial
 import org.example.project.presentation.theme.Material.flangeMaterial
 import org.example.project.presentation.theme.Material.silverMaterial
+import org.example.project.presentation.theme.Material.test
 import org.example.project.presentation.viewModel.BopViewModel
 import org.example.project.presentation.viewModel.PartViewModel
 
@@ -164,6 +166,23 @@ fun createAnnular(annular: PartViewModel) {
         bolt.translateY = topFlangeTop + boltH / 2-40.0
 
         annular.object3D.children.add(bolt)
+
+        val casingAdapter = Cylinder(r(40.0), 14.0)
+        casingAdapter.material = blackish //flangeMaterial
+        casingAdapter.translateY = currentY - 30.0 - centerOffset
+        annular.object3D.children.add(casingAdapter)
+
+        for (x in listOf(1, 2, 3, 4)) {
+            val actuator = Cylinder(r(4.0), 79.0)
+            actuator.material = boltMaterial
+            actuator.translateX = 0.0
+            actuator.translateY = 66.0 - centerOffset
+            actuator.transforms.addAll(
+                Rotate(90.0, Rotate.Z_AXIS),      // Make horizontal
+                Rotate(x * 45.0, Rotate.X_AXIS)   // Rotate around X axis for positioning
+            )
+            annular.object3D.children.add(actuator)
+        }
     }
     //**************************************************************************************************************
     //**************************************************************************************************************
@@ -173,18 +192,18 @@ fun createAnnular(annular: PartViewModel) {
 
     ////////////////////////////////////////////////////////////////////////////////
     // 0. Wellhead Housing
-    val wellhead2 = Cylinder(r(53.0), 20.0)
+    val wellhead2 = Cylinder(r(53.0), 22.0)
     wellhead2.material = bodyMaterial
     wellhead2.translateY = currentY + 20.0 - centerOffset
     annular.object3D.children.add(wellhead2)
     currentY += 20.0
 
     // 2. Base Flange
-    val baseFlange = Cylinder(r(40.0), 20.0)
+    val baseFlange = Cylinder(r(40.0), 47.0)
     baseFlange.material = flangeMaterial
     baseFlange.translateY = currentY + 4.0 - centerOffset
     annular.object3D.children.add(baseFlange)
-    currentY += 8.0
+    currentY += 15.0
 
 
 
@@ -193,10 +212,10 @@ fun createAnnular(annular: PartViewModel) {
 fun createBlind(blind: PartViewModel) {
     // 3. Hydraulic Connector (H4)
     val h4Connector = Cylinder(r(36.0), 18.0)
-    h4Connector.material = flangeMaterial
+    h4Connector.material = silverMaterial
     h4Connector.translateY = currentY + 9.0 - centerOffset
     blind.object3D.children.add(h4Connector)
-    currentY += 18.0
+    currentY += 20.0
 
     val lowerRamBody = Box(78.0, 74.0, 35.0)  // Width (X), Height (Y), Depth (Z)
     lowerRamBody.translateY = currentY + 32.0 - centerOffset
@@ -218,7 +237,7 @@ fun createBlind(blind: PartViewModel) {
     blind.object3D.children.add(lowerRamBody4)
 
 
-    val lowerRamY = currentY + 20.0 - centerOffset
+    val lowerRamY = currentY + 18.0 - centerOffset
 
     val leftPipeRam = Box(75.0, 25.0, 15.0)
     leftPipeRam.material = silverMaterial
@@ -292,17 +311,220 @@ fun createBlind(blind: PartViewModel) {
         Pair(rightPipeRam2, leftPipeRam2)
     )
 
-    currentY += 30.0
 
 
+    val leftLockShaft = Cylinder(r(45.0), 5.0)
+    leftLockShaft.material = silverMaterial
+    leftLockShaft.translateX = 0.0
+    leftLockShaft.translateY = lowerRamY-32
+    leftLockShaft.translateZ = 0.0
+    blind.object3D.children.add(leftLockShaft)
+
+
+    currentY +=10.0
+
+    val middleRamBody = Cylinder(r(34.0), 80.0)
+    middleRamBody.material = bodyMaterial
+    middleRamBody.translateY = currentY + 15.0 - centerOffset
+    blind.object3D.children.add(middleRamBody)
 
 }
+val middleRamY = currentY - 20.0 + centerOffset
 
 fun createSpool(spool: PartViewModel) {
 
+    val spoopofset = 40.0
 
+    val middleRamBodyadapt = Cylinder(r(36.0), 8.0)
+    middleRamBodyadapt.material = bodyMaterial
+    middleRamBodyadapt.translateY = currentY + 13.0+spoopofset -centerOffset
+    spool.object3D.children.add(middleRamBodyadapt)
+
+    val middleRamBody = Cylinder(r(34.0), 80.0)
+    middleRamBody.material = bodyMaterial
+    middleRamBody.translateY = currentY + 15.0 -centerOffset+spoopofset
+    spool.object3D.children.add(middleRamBody)
+    val middleRamY = currentY + 20.0-  centerOffset+spoopofset
+
+
+
+    val killines = Cylinder(r(25.0), 80.0)
+    killines.material = flangeMaterial
+    killines.translateX = 0.0
+    killines.translateY = middleRamY+10
+    killines.rotationAxis = Rotate.Z_AXIS
+    killines.rotate = 90.0
+    spool.object3D.children.add(killines)
+
+    val killines2 = Cylinder(r(8.0), 110.0)
+    killines2.material = silverMaterial
+    killines2.translateX = 0.0
+    killines2.translateY = middleRamY+10
+    killines2.rotationAxis = Rotate.Z_AXIS
+    killines2.rotate = 90.0
+    spool.object3D.children.add(killines2)
+    // 4 horizontal screws at the 4 corners (pointing in Y direction, through both sides)
+    val boxWidth = 78.0
+    val boxHeight = 74.0
+    val boxDepth = 37.0
+    val margin = 12.0
+
+    val corners = listOf(
+        Triple(-boxWidth/2 + margin, -boxHeight/2 + margin, 0.0),  // Bottom-Left - centered in Z
+        Triple( boxWidth/2 - margin, -boxHeight/2 + margin, 0.0),  // Bottom-Right - centered in Z
+        Triple(-boxWidth/2 + margin,  boxHeight/2 - margin, 0.0),  // Top-Left - centered in Z
+        Triple( boxWidth/2 - margin,  boxHeight/2 - margin, 0.0)   // Top-Right - centered in Z
+    )
+    val lowerRamBody = Box(78.0, 74.0, 35.0)  // Width (X), Height (Y), Depth (Z)
+
+    for (corner in corners) {
+        val screw = Cylinder(2.0, boxDepth + 10.0)  // Longer than box depth to stick out both sides
+        screw.material = boltMaterial
+        screw.translateX = corner.first
+        screw.translateY = lowerRamBody.translateY + corner.second + 25.0
+        screw.translateZ = corner.third
+        screw.rotationAxis = Rotate.X_AXIS
+        screw.rotate = 90.0
+        spool.object3D.children.add(screw)
+    }
+
+    val killines3 = Cylinder(r(18.0), 3.0)
+    killines3.material = flangeMaterial
+    killines3.translateX = 55.0
+    killines3.translateY = middleRamY+10
+    killines3.rotationAxis = Rotate.Z_AXIS
+    killines3.rotate = 90.0
+    spool.object3D.children.add(killines3)
+
+    val killines4 = Cylinder(r(18.0), 3.0)
+    killines4.material = flangeMaterial
+    killines4.translateX = -55.0
+    killines4.translateY = middleRamY+10
+    killines4.rotationAxis = Rotate.Z_AXIS
+    killines4.rotate = 90.0
+    spool.object3D.children.add(killines4)
 }
 
 fun createPipe(pipe: PartViewModel) {
+    currentY += 95.0
+    // 4 horizontal screws at the 4 corners (pointing in Y direction, through both sides)
+    val boxWidth = 78.0
+    val boxHeight = 74.0
+    val boxDepth = 37.0
+    val margin = 12.0
+    val lowerRamBody = Box(78.0, 74.0, 35.0)  // Width (X), Height (Y), Depth (Z)
+
+    val lowerRamBody2 = Box(75.0, 70.0, 35.0)  // Width (X), Height (Y), Depth (Z)
+    lowerRamBody2.material = bodyMaterial
+    lowerRamBody2.translateY = currentY + 30.0 - centerOffset
+    pipe.object3D.children.add(lowerRamBody2)
+
+    val corners2 = listOf(
+        Triple(-boxWidth/2 + margin, -boxHeight/2 + margin+120, 0.0),  // Bottom-Left - centered in Z
+        Triple( boxWidth/2 - margin, -boxHeight/2 + margin+120, 0.0),  // Bottom-Right - centered in Z
+        Triple(-boxWidth/2 + margin,  boxHeight/2 - margin+120, 0.0),  // Top-Left - centered in Z
+        Triple( boxWidth/2 - margin,  boxHeight/2 - margin+120, 0.0)   // Top-Right - centered in Z
+    )
+
+    for (corner in corners2) {
+        val screw = Cylinder(2.0, boxDepth + 10.0)  // Longer than box depth to stick out both sides
+        screw.material = boltMaterial
+        screw.translateX = corner.first
+        screw.translateY = lowerRamBody.translateY +30.0+ corner.second
+        screw.translateZ = corner.third
+        screw.rotationAxis = Rotate.X_AXIS
+        screw.rotate = 90.0
+        pipe.object3D.children.add(screw)
+    }
+
+    val lowerRamBody5 = Box(70.0, 66.0, 40.0)  // Width (X), Height (Y), Depth (Z)
+    lowerRamBody5.material = silverMaterial
+    lowerRamBody5.translateY = currentY + 30.0 - centerOffset
+    pipe.object3D.children.add(lowerRamBody5)
+
+    val lowerRamBody6 = Box(66.0, 62.0, 44.0)  // Width (X), Height (Y), Depth (Z)
+    lowerRamBody6.material = bodyMaterial
+    lowerRamBody6.translateY = currentY + 30.0 - centerOffset
+    pipe.object3D.children.add(lowerRamBody6)
+
+    val leftPipeRam3 = Box(75.0, 25.0, 15.0)
+    leftPipeRam3.material = silverMaterial
+    leftPipeRam3.translateX = -15.0
+    leftPipeRam3.translateY = centerOffset+30.0
+    leftPipeRam3.translateZ = 0.0
+    pipe.object3D.children.add(leftPipeRam3)
+
+
+    val rightPipeRam4 = Box(75.0, 25.0, 15.0)
+    rightPipeRam4.material = silverMaterial
+    rightPipeRam4.translateX = 15.0
+    rightPipeRam4.translateY = centerOffset+30.0
+    rightPipeRam4.translateZ = 0.0
+    pipe.object3D.children.add(rightPipeRam4)
+
+
+    val leftBonnet3 = Cylinder(r(12.0), 20.0)
+    leftBonnet3.material = flangeMaterial
+    leftBonnet3.translateX = -60.0
+    leftBonnet3.translateY = centerOffset+30.0
+    leftBonnet3.rotationAxis = Rotate.Z_AXIS
+    leftBonnet3.rotate = 90.0
+    pipe.object3D.children.add(leftBonnet3)
+
+
+    val rightBonnet4 = Cylinder(r(12.0), 20.0)
+    rightBonnet4.material = flangeMaterial
+    rightBonnet4.translateX = 60.0
+    rightBonnet4.translateY = centerOffset+30.0
+    rightBonnet4.rotationAxis = Rotate.Z_AXIS
+    rightBonnet4.rotate = 90.0
+    pipe.object3D.children.add(rightBonnet4)
+
+    pipe.movRAM = listOf(Pair(rightBonnet4 ,leftBonnet3))
+
+    currentY += 60.0
+    val upperRamBody = Cylinder(r(34.0), 30.0)
+    upperRamBody.material = bodyMaterial
+    upperRamBody.translateY = currentY + 10.0 - centerOffset
+    pipe.object3D.children.add(upperRamBody)
+    val upperRamY = currentY + 20.0 - centerOffset
+
+    currentY += 20.0
+
+
+    for (x in listOf(1, 2, 3, 4)) {
+        val actuator = Cylinder(r(4.0), 59.0)
+        actuator.material = boltMaterial
+        actuator.translateX = 0.0
+        actuator.translateY = currentY-110.0//66.0 - centerOffset
+        actuator.transforms.addAll(
+            Rotate(90.0, Rotate.Z_AXIS),      // Make horizontal
+            Rotate(x * 45.0, Rotate.X_AXIS)   // Rotate around X axis for positioning
+        )
+
+        pipe.object3D.children.add(actuator)
+
+    }
+        val upperConnector = Cylinder(r(56.0), 18.0)
+        upperConnector.material = bodyMaterial
+        upperConnector.translateY = currentY + 9.0 - centerOffset
+        pipe.object3D.children.add(upperConnector)
+        currentY += 18.0
+
+
+    val riserAdapter = Cylinder(r(50.0), 20.0)
+    riserAdapter.material = flangeMaterial
+    riserAdapter.translateY = currentY + 10.0 - centerOffset
+    pipe.object3D.children.add(riserAdapter)
+    currentY += 20.0
+
+    val flexCyl = Cylinder(r(40.0), 12.0)
+    flexCyl.material = silverMaterial
+    flexCyl.translateY = currentY + 0.0 - centerOffset
+    pipe.object3D.children.add(flexCyl)
+
+
+
+
 
 }
