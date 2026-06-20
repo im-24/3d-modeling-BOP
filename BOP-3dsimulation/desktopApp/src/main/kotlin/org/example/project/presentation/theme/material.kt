@@ -22,4 +22,6 @@ object Material {
         specularColor = Color.WHITE
         specularPower = 100.0
     }
+    val test = PhongMaterial(Color.rgb(0, 255, 0)).apply {specularPower=100.0 }
+
 }

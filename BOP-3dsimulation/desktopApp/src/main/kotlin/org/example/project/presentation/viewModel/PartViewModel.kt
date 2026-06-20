@@ -11,14 +11,14 @@ class PartViewModel(
     parent: BopViewModel,
     children: List<Shape3D> ?= null,
     height: Double,
-    movRAM: Pair<Group, Group > ,
+    movRAM: List<Pair<Shape3D, Shape3D> >,
     visible: Boolean = true,
     object3D : Group,
     selected: Boolean = false,
   ){
     val parent= parent
     val height= height
-    val movRAM= movRAM
+    var movRAM= movRAM
     var visible= visible
     var selected= selected
     val children= children

@@ -19,7 +19,7 @@ data class BOPobject(
 data class part(
     val parent: BopViewModel,
     val height: Double,
-    val movRAM: Pair<Group,Group>,
+    val movRAM: List <Pair<Shape3D, Shape3D>>,
     var visible: Boolean = true,
     var object3D: Group,
     var selected: Boolean = false,
