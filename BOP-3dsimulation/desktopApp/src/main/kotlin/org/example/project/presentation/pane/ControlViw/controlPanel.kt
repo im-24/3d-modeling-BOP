@@ -1,11 +1,14 @@
 package org.example.project.presentation.pane.ControlViw
 
+import javafx.animation.TranslateTransition
 import javafx.beans.property.SimpleDoubleProperty
 import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.control.*
 import javafx.scene.layout.*
 import javafx.scene.paint.Color
+import javafx.scene.shape.Shape3D
+import javafx.util.Duration
 import org.example.project.presentation.viewModel.BopViewModel
 import org.example.project.presentation.viewModel.PartViewModel
 import org.example.project.presentation.viewModel.view
@@ -87,67 +90,127 @@ private fun axisRow(
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  Keyboard RAM controller
+//  Keyboard RAM controller  —  selection is per PAIR
 // ─────────────────────────────────────────────────────────────────
 class RamController(namedParts: Map<String, PartViewModel>) {
 
-    data class RamEntry(
-        val label: String,
-        val pairIndex: Int,
-        val shape: javafx.scene.shape.Shape3D,
-        val sibling: javafx.scene.shape.Shape3D,
-        val openOffset: Double,
-        val closedOffset: Double
+    /**
+     * One selectable unit = one pair of opposing RAM halves.
+     * [shapeA] moves to -openOffset, [shapeB] moves to +openOffset.
+     * Parts with an empty movRAM list (e.g. spool) are skipped entirely.
+     */
+    data class RamPair(
+        val key: String,                     // unique id, e.g. "blind-0"
+        val label: String,                   // display name, e.g. "Blind RAM pair 1"
+        val shapeA: Shape3D,                 // left / top half
+        val shapeB: Shape3D,                 // right / bottom half
+        val openOffset: Double  = 60.0,
+        val closedOffset: Double = 25.0,
     )
 
-    val entries: MutableList<RamEntry> = mutableListOf()
-    private var selectedIndex = -1
-    private val pairState: MutableMap<String, Boolean> = mutableMapOf()
+    val pairs: MutableList<RamPair> = mutableListOf()
+    internal var selectedIndex = -1
+    internal val pairState: MutableMap<String, Boolean> = mutableMapOf()
+    /** Called after every selection or open/close action — wire to your UI refresh. */
+    var onChanged: (() -> Unit)? = null // key → isOpen
 
     init {
-        val order = listOf("annular", "blind", "spool", "pipe")
+        // Only parts that actually have movRAM entries are included.
+        // "spool" has none so it is naturally skipped by the ?: continue guard.
+        val order = listOf("annular", "blind", "pipe")
         for (name in order) {
             val part = namedParts[name] ?: continue
+            val movRAM = part.movRAM?.takeIf { it.isNotEmpty() } ?: continue
             val display = name.replaceFirstChar { it.uppercaseChar() }
-            part.movRAM?.forEachIndexed { idx, (a, b) ->
-                val key = "$name-$idx"
+            movRAM.forEachIndexed { idx, (a, b) ->
+                val key   = "$name-$idx"
+                val label = if (movRAM.size == 1) "$display RAM" else "$display RAM ${idx + 1}"
                 pairState[key] = false
-                entries.add(RamEntry("$display pair ${idx + 1}", idx, a, b, -30.0,  0.0))
-                entries.add(RamEntry("$display pair ${idx + 1}", idx, b, a,  30.0,  0.0))
+                pairs.add(RamPair(key, label, a, b))
             }
         }
     }
 
-    val hasEntries get() = entries.isNotEmpty()
+    val hasEntries get() = pairs.isNotEmpty()
+
+    // ── Selection ──────────────────────────────────────────────────
 
     fun select(index: Int) {
-        if (selectedIndex in entries.indices)
-            entries[selectedIndex].shape.material = Material.flangeMaterial
-        selectedIndex = index.coerceIn(entries.indices)
-        if (selectedIndex in entries.indices)
-            entries[selectedIndex].shape.material = Material.selected
+        // Deselect old pair — restore both shapes
+        if (selectedIndex in pairs.indices) {
+            val old = pairs[selectedIndex]
+            old.shapeA.material = Material.flangeMaterial
+            old.shapeB.material = Material.flangeMaterial
+        }
+        selectedIndex = index.coerceIn(pairs.indices)
+        // Highlight new pair — both shapes
+        if (selectedIndex in pairs.indices) {
+            val p = pairs[selectedIndex]
+            p.shapeA.material = Material.selected
+            p.shapeB.material = Material.selected
+        }
+        onChanged?.invoke()
     }
 
-    fun selectNext() { if (hasEntries) select((selectedIndex + 1) % entries.size) }
-    fun selectPrev() { if (hasEntries) select((selectedIndex - 1 + entries.size) % entries.size) }
+    fun selectNext() { if (hasEntries) select((selectedIndex + 1) % pairs.size) }
+    fun selectPrev() { if (hasEntries) select((selectedIndex - 1 + pairs.size) % pairs.size) }
+
+    // ── Open / close / toggle ──────────────────────────────────────
 
     fun toggleSelected() {
-        if (selectedIndex !in entries.indices) return
-        val e   = entries[selectedIndex]
-        val key = "${e.label.substringBefore(' ').lowercase()}-${e.pairIndex}"
-        val nowOpen = !(pairState[key] ?: false)
-        pairState[key] = nowOpen
-        entries.filter { it.label == e.label && it.pairIndex == e.pairIndex }
-            .forEach { it.shape.translateX = if (nowOpen) it.openOffset else it.closedOffset }
+        val p = currentPair() ?: return
+        animatePair(p, open = !(pairState[p.key] ?: false))
     }
 
-    fun currentLabel(): String {
-        if (selectedIndex !in entries.indices) return "None selected"
-        val e   = entries[selectedIndex]
-        val key = "${e.label.substringBefore(' ').lowercase()}-${e.pairIndex}"
-        val st  = if (pairState[key] == true) "OPEN" else "CLOSED"
-        return "${e.label}  [$st]"
+    fun openSelected() {
+        val p = currentPair() ?: return
+        if (pairState[p.key] == true) return
+        animatePair(p, open = true)
     }
+    val offsetitem = 0.0
+
+    fun closeSelected() {
+        val p = currentPair() ?: return
+        if (pairState[p.key] == false) return
+        animatePair(p, open = false)
+    }
+    private fun animatePair(pair: RamPair, open: Boolean) {
+        pairState[pair.key] = open
+        val targetA = if (open) -pair.openOffset -offsetitem else pair.closedOffset -offsetitem
+        val targetB = if (open)  pair.openOffset - offsetitem else pair.closedOffset -offsetitem
+
+        // Set the final position immediately
+        // Then animate from current to target
+        val startA = pair.shapeA.translateX - offsetitem
+        val startB = pair.shapeB.translateX -offsetitem
+
+        // Calculate the difference
+        val deltaA = targetA - startA
+        val deltaB = targetB - startB
+
+        // Animate using a timeline for more control
+        val anim = javafx.animation.Timeline(
+            javafx.animation.KeyFrame(
+                javafx.util.Duration.seconds(0.8),
+                javafx.animation.KeyValue(pair.shapeA.translateXProperty(), targetA),
+                javafx.animation.KeyValue(pair.shapeB.translateXProperty(), targetB)
+            )
+        )
+        anim.play()
+
+        onChanged?.invoke()
+    }
+
+    // ── Status label ───────────────────────────────────────────────
+
+    fun currentLabel(): String {
+        val p  = currentPair() ?: return "None selected"
+        val st = if (pairState[p.key] == true) "OPEN" else "CLOSED"
+        return "${p.label}  [$st]"
+    }
+
+    private fun currentPair(): RamPair? =
+        if (selectedIndex in pairs.indices) pairs[selectedIndex] else null
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -305,34 +368,53 @@ class controlPanel(
             }
 
             if (ramCtrl.hasEntries) {
-                val statusLbl = Label(ramCtrl.currentLabel()).apply {
-                    style      = "-fx-text-fill: $MUTED; -fx-font-size: 10px; -fx-wrap-text: true;"
-                    maxWidth   = Double.MAX_VALUE
-                    isWrapText = true
+                // Show one row per selectable pair so the user sees the full list
+                val pairLabels = ramCtrl.pairs.mapIndexed { idx, pair ->
+                    Label("${idx + 1}.  ${pair.label}").apply {
+                        style      = "-fx-text-fill: $MUTED; -fx-font-size: 10px;"
+                        maxWidth   = Double.MAX_VALUE
+                        isWrapText = true
+                    }
                 }
-                fun refresh() { statusLbl.text = ramCtrl.currentLabel() }
+                fun refreshLabels() {
+                    // Bold + accent the currently selected pair label
+                    pairLabels.forEachIndexed { idx, lbl ->
+                        val isSelected = idx == ramCtrl.selectedIndex
+                        val state      = if (ramCtrl.pairs[idx].let { ramCtrl.pairState[it.key] } == true) "  [OPEN]" else "  [CLOSED]"
+                        lbl.text  = "${idx + 1}.  ${ramCtrl.pairs[idx].label}${ if (isSelected) state else "" }"
+                        lbl.style = if (isSelected)
+                            "-fx-text-fill: #61afef; -fx-font-size: 10px; -fx-font-weight: bold;"
+                        else
+                            "-fx-text-fill: $MUTED; -fx-font-size: 10px;"
+                    }
+                }
+                refreshLabels()
+                ramCtrl.onChanged = { refreshLabels() }
 
-                val prevBtn = Button("◀ Prev").apply {
+                val pairList = VBox(3.0, *pairLabels.toTypedArray()).apply { maxWidth = Double.MAX_VALUE }
+
+                val prevBtn = Button("▲ Prev pair").apply {
                     HBox.setHgrow(this, Priority.ALWAYS); maxWidth = Double.MAX_VALUE
                     style = "-fx-background-color: $SURFACE2; -fx-text-fill: $MUTED; " +
                             "-fx-border-color: $BORDER; -fx-border-radius: 4; -fx-background-radius: 4; " +
                             "-fx-font-size: 11px; -fx-cursor: hand;"
-                    setOnAction { if (view.keyboardControlEnabled.get()) { ramCtrl.selectPrev(); refresh() } }
+                    setOnAction { if (view.keyboardControlEnabled.get()) { ramCtrl.selectPrev(); refreshLabels() } }
                 }
-                val nextBtn = Button("Next ▶").apply {
+                val nextBtn = Button("▼ Next pair").apply {
                     HBox.setHgrow(this, Priority.ALWAYS); maxWidth = Double.MAX_VALUE
                     style = prevBtn.style
-                    setOnAction { if (view.keyboardControlEnabled.get()) { ramCtrl.selectNext(); refresh() } }
+                    setOnAction { if (view.keyboardControlEnabled.get()) { ramCtrl.selectNext(); refreshLabels() } }
                 }
                 val toggleBtn = Button("Toggle open / closed  [Enter]").apply {
                     maxWidth = Double.MAX_VALUE
                     style    = "-fx-background-color: $SURFACE2; -fx-text-fill: #c678dd; " +
                             "-fx-border-color: #5a3070; -fx-border-radius: 4; -fx-background-radius: 4; " +
                             "-fx-font-size: 11px; -fx-cursor: hand;"
-                    setOnAction { if (view.keyboardControlEnabled.get()) { ramCtrl.toggleSelected(); refresh() } }
+                    setOnAction { if (view.keyboardControlEnabled.get()) { ramCtrl.toggleSelected(); refreshLabels() } }
                 }
 
-                val btnGroup = VBox(6.0, HBox(6.0, prevBtn, nextBtn), toggleBtn, statusLbl).apply {
+                val btnGroup = VBox(6.0, pairList, panelSeparator(),
+                    HBox(6.0, prevBtn, nextBtn), toggleBtn).apply {
                     maxWidth = Double.MAX_VALUE
                     disableProperty().bind(view.keyboardControlEnabled.not())
                 }
@@ -378,11 +460,11 @@ class controlPanel(
     fun handleKey(code: javafx.scene.input.KeyCode, view: view) {
         if (!view.keyboardControlEnabled.get()) return
         when (code) {
-            javafx.scene.input.KeyCode.ENTER       -> { ramCtrl.toggleSelected() }
-            javafx.scene.input.KeyCode.LEFT,
-            javafx.scene.input.KeyCode.UP          -> ramCtrl.selectPrev()
-            javafx.scene.input.KeyCode.RIGHT,
-            javafx.scene.input.KeyCode.DOWN        -> ramCtrl.selectNext()
+            javafx.scene.input.KeyCode.ENTER -> ramCtrl.toggleSelected()
+            javafx.scene.input.KeyCode.RIGHT -> ramCtrl.openSelected()
+            javafx.scene.input.KeyCode.LEFT  -> ramCtrl.closeSelected()
+            javafx.scene.input.KeyCode.UP    -> ramCtrl.selectPrev()
+            javafx.scene.input.KeyCode.DOWN  -> ramCtrl.selectNext()
             else -> {}
         }
     }
